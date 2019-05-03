@@ -1,0 +1,44 @@
+---
+title: "Daft Punk Project"
+author: "Xavi Martí Bofill"
+date: "6/5/2018"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r setup}
+library(readr)
+library(plyr)
+library(dplyr)
+library(data.table)
+library(magrittr)
+library(ggplot2)
+
+source('utils.R')
+```
+
+```{r data preparation}
+groups <- 1:40
+
+orders <- llply(groups, function(group) createOrdersData(group, packs, products, shipments, pib))
+```
+
+```{r results}
+
+```
+
+```{r save}
+for(i in 1:groups) {
+    system(paste0('mkdir Group', i))
+    fwrite(orders[[i]], paste0('Group', i, '/Orders.csv'))
+    for(fileName in c('Products', 'Packs', 'shipments')) {
+        system(paste0('cp ', fileName, '.csv Group', i, '/', fileName, '.csv'))
+    }
+    system(paste0('zip Group', i))
+}
+```
+
+

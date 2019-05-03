@@ -1,0 +1,76 @@
+---
+title: "Daft Punk Project Results"
+author: "Xavi Martí Bofill"
+date: "4/6/2018"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(magrittr)
+library(plyr)
+library(dplyr)
+library(scales)
+library(data.table)
+library(tidyr)
+library(knitr)
+
+source('utils.R')
+```
+
+### All units and $ / € are in Thousands.
+```{r results, echo=FALSE, warning=FALSE}
+
+packs <- fread('Packs.csv')
+shipments <- fread('shipments.csv')
+groups <- 7
+
+for(group in 7:groups) {
+    unzip(paste0('Group', group, '.zip'))
+    orders <- fread(paste0('Group', group, '/Orders.csv'))
+    
+    orders %<>% 
+        left_join(packs, by = 'Pack') %>%
+        left_join(shipments, by = c('Destination' = 'Code')) %>%
+        mutate(Weight = correctComma(Weight),
+               costKg = correctComma(`Cost / Kg`),
+               totalWeight = Units * Weight,
+               rawCost = Units * Cost,
+               shipCost = totalWeight * costKg,
+               totalCost = rawCost + shipCost,
+               revenue = Units * Price)
+    
+    totalStats <- orders %>% getStats
+    
+    statsByPack <- orders %>% group_by(Pack) %>% getStats
+    
+    statsByCountry <- (orders %>% group_by(Destination) %>% getStats %>% arrange(-revenue))[1:10,]
+    
+    statsByWeek <- orders %>% group_by(Week) %>% getStats
+    
+    statsByProduct <- orders %>%
+        select(Units, `STL-HTD Digital Download`, `STL-HTD Album CD`, `Daft Punk T-Shirt`, `Single 7"" Vinyl`, `Daft Punk Cap`, `STL-HTD LP Vinyl`, `Tour Ticket`, `Daft Punk Helmet Replica`) %>%
+        gather(product, unit, c(`STL-HTD Digital Download`, `STL-HTD Album CD`, `Daft Punk T-Shirt`, `Single 7"" Vinyl`, `Daft Punk Cap`, `STL-HTD LP Vinyl`, `Tour Ticket`, `Daft Punk Helmet Replica`)) %>%
+        mutate(units = Units * unit) %>%
+        group_by(product) %>%
+        summarize(units = sum(units) / 1000)
+    
+    cat(paste0('\nGroup ', group, ' results:'))
+    print(kable(totalStats))
+    
+    cat(paste0('\nGroup ', group, ' results, by selling pack:'))
+    print(kable(statsByPack))
+    
+    cat(paste0('\nGroup ', group, ' results, by Week:'))
+    print(kable(statsByWeek))
+    
+    cat(paste0('\nGroup ', group, ' results, top Destination Countries:'))
+    print(kable(statsByCountry))
+    
+    cat(paste0('\nGroup ', group, ' results, Units by Base Product:'))
+    print(kable(statsByProduct))
+    
+    cat('\n------------------------------------------------------------\n')
+}
+```
